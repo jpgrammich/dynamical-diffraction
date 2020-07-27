@@ -7,6 +7,8 @@
 % Improved accuracy by fixing delta and final step interpolation 1/19/2017
 % Corrected signs on p_0i, p_0r, p_Hi, p_Hr to work with X0h database 1/20/17
 % Based on previous work by Sooheyong Lee (KRISS) and G. Jackson Williams (LLNL)
+% Revised by JG 7.25.20 - added new inputs for thermalfilm.m to work.
+% num_times MUST be set to 50 - code will not work otherwise
 %
 % INPUTS:
 %   model           strain model, selected from the following list:
@@ -38,24 +40,24 @@
 %   angle       a vector of angles calculated, absolute, in degrees
 %
 % SAMPLE Usage:
-% [A A0 time angle Strain z] = TRXD ('thermalFilm', 'Si', [0 0 4], [0 0 1], 10, 1, 0, 0)
+% [A A0 time angle Strain z] = TRXD ('thermalFilm', 'Al', 'Si', [0 0 4], [0 0 1], 10, 1, 0, 0, 2e-7)
 
 
-function [A A0 time angle Strain_save z] = TRXD (model, crystal, reflection, cut, energy, fluence, angle, time)
+function [A A0 time angle Strain_save z] = TRXD (model, film, crystal, reflection, cut, energy, fluence, angle, time, L)
 more off; % Turn on scrolling
 
 %% Include subdirectories in path
 addpath('main','include','strain_functions','data');
 
 %% Some constants that can be changed to speed things up when using defaults
-num_times = 20;
+num_times = 50;
 num_angles = 400;
 time_f = 5e-7; % in seconds
 angle_width = 2e-2; % in degrees
 
 %% Check inputs
 
-if nargin ~= 8
+if nargin ~= 10
   fprintf('Incorrect number of input arguments\n')
   nargin
   return
@@ -162,12 +164,12 @@ end
 angle = thetaB + angle*pi/180; % Convert angle to radians and add Bragg Angle
 
 if strcmp(model,'thermalFilm')
-  [longitudinal transverse sheer time_out z] = thermalFilm (crystal, fluence, time, 5.1*Lext);
+  [longitudinal trans sheer time_out z] = thermalFilm (film, crystal, fluence, time, 5.1*Lext, L);
 elseif strcmp(model,'strainFile')
   z = load('depth_file.txt');
   time_out = load('time_file.txt');
   longitudinal = load('strain_file.txt');
-  transverse = 0*longitudinal;
+  trans = 0*longitudinal;
   sheer = 0*longitudinal;
 elseif strcmp(model,'strainFile1D') % strains just at one time
   z = load('depth_file.txt');
@@ -175,16 +177,16 @@ elseif strcmp(model,'strainFile1D') % strains just at one time
   time_out = time_file(fluence); % No time specified, just strain at one time
   all_strain = load('strain_file.txt');
   longitudinal = all_strain(floor(fluence),:); % load only one column
-  transverse = 0*longitudinal;
+  trans = 0*longitudinal;
   sheer = 0*longitudinal;
   time=time_out;
 elseif strcmp(model,'benchmark')
   clear time;
   time = 1;
   time_out = 1;
-  dz = 5.1*Lext/10000; % 10,000 depth points out to 5.1*Lext
+  dz = 5.1*Lext/10000 % 10,000 depth points out to 5.1*Lext
   z = dz*(1:10000); 
-  transverse = 0.*z; % no transverse strain
+  trans = 0.*z; % no transverse strain
   sheer = 0.*z; % no sheer strain
   longitudinal = 0.*z;
   longitudinal =1e-4 * (z<=2e-6); % Simple strain model 
@@ -200,11 +202,11 @@ for m = 1: length(time)
   fprintf('Evaluating rocking curve at %e s.\n',time_out(m))
   if time(m) == time_out(m) % if the time doesn't need to be remeshed
    st1(m,:) = longitudinal(m,:);
-   st2(m,:) = transverse(m,:);
+   st2(m,:) = trans(m,:);
    st3(m,:) = sheer(m,:);
   else % remesh time if necessary
    st1(m,:) = interp1(time_out,longitudinal,time(m), 'spline', 'extrap');
-   st2(m,:) = interp1(time_out,transverse,time(m), 'spline', 'extrap');
+   st2(m,:) = interp1(time_out,trans,time(m), 'spline', 'extrap');
    st3(m,:) = interp1(time_out,sheer,time(m), 'spline', 'extrap');
   end
   Strain_in = [st1(m,:)' st2(m,:)' st3(m,:)']; % Evaluate strain at each time
