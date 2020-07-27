@@ -10,6 +10,7 @@
 % Semiconductor properties looked up in sample.dat, which is required
 % First written by Eric Landahl, 12.28.2016
 % Revised by EL 1.9.2017
+% Revised by JG 7.2.2020
 % Usually called by TRXD.m
 %
 %% INPUTS:
@@ -21,13 +22,13 @@
 %   fluence     absorbed laser fluence in mJ/cm^2
 %   time        a vector of times to be calculated in seconds
 %   max_depth   usually 5*Lext, Lext is the x-ray extinction length in meters
+%   L               thickness of the film
 %% OUTPUTS:
 %   longitudinal    longitudinal strain, size = length(time_out) x length(z)
 %   transverse      transverse strain, size = length(time_out) x length(z)
 %   sheer           sheer strain, size = length(time_out) x length(z)
 %   z               a vector of depths in meters
 %   time_out        a vector of times returned in seconds, not the same as time_in
-%   L               thickness of the film
 %
 %% NOTE: The strain will be calculated out to time_in(end) however the time-steps
 %        are chosen for convenience and accuracy in evaluating the strain. 
